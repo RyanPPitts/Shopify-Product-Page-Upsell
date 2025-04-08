@@ -2,7 +2,7 @@
 
 This widget displays **related upsell products** on a Shopify product page using the product’s first collection. Customers can add related items directly to their cart without leaving the page.
 
-Dawn theme
+Theme type : Dawn
 
 ![Screenshot 2025-04-08 163103](https://github.com/user-attachments/assets/42062284-4ba3-4c87-9d8a-ca6618b4d34d)
 
