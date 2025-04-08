@@ -1,0 +1,272 @@
+{% assign collection = product.collections.first %}
+{% if collection %}
+<div class="upsell-products">
+    <h3>{{ upsell_heading }}</h3>
+    <div class="upsell-carousel">
+        {% assign upsell_count = 0 %}
+        {% for item in collection.products %}
+        {% if item.id != product.id %}
+        <div class="upsell-item">
+            <a href="{{ item.url }}">
+                <img class="upsell-image" src="{{ item.featured_image | img_url: 'medium' }}" alt="{{ item.title }}">
+            </a>
+            <p class="upsell-title">{{ item.title }}</p>
+            <p class="upsell-price">{{ item.price | money }}</p>
+            <form method="post" action="/cart/add" class="upsell-form" data-product-id="{{ item.id }}">
+                {% if item.variants.size > 1 %}
+                <select class="upsell-variant-selector" name="id">
+                    {% for variant in item.variants %}
+                    <option value="{{ variant.id }}">{{ variant.title }} - {{ variant.price | money }}</option>
+                    {% endfor %}
+                </select>
+                {% else %}
+                <input type="hidden" name="id" value="{{ item.variants.first.id }}">
+                {% endif %}
+
+                <button type="submit" class="button upsell-add-button">Add to cart</button>
+
+                <div class="upsell-feedback" style="display: none; margin-top: 0.5rem;">
+                    ✅ Item added to cart. <a href="/cart" class="upsell-cart-link">View cart</a>
+                </div>
+            </form>
+        </div>
+        {% assign upsell_count = upsell_count | plus: 1 %}
+        {% if upsell_count == upsell_limit %}
+        {% break %}
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .upsell-carousel {
+        margin: 1rem 0;
+    }
+
+    .slick-slide {
+        padding: 0 10px;
+    }
+
+    .upsell-item {
+        background: #f9f9f9;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .custom-arrow {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+        color: #333;
+    }
+
+    .slick-prev.custom-arrow {
+        left: -25px;
+    }
+
+    .slick-next.custom-arrow {
+        right: -25px;
+    }
+
+    .slick-disabled {
+        opacity: 0.3;
+        pointer-events: none;
+    }
+
+    .upsell-carousel .upsell-item {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+        padding: 1rem;
+        background: #f9f9f9;
+        border-radius: 8px;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
+    .upsell-carousel .upsell-title {
+        margin: 0.5rem 0 0.2rem;
+        font-weight: bold;
+        min-height: 2.5em;
+        /* keeps titles balanced even if one is multi-line */
+    }
+
+    .upsell-carousel .upsell-price {
+        margin-bottom: 1rem;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .upsell-carousel .upsell-form {
+        margin-top: auto;
+    }
+
+    .slick-slide {
+        display: flex !important;
+        height: auto !important;
+    }
+
+    .slick-slide>div {
+        width: 100%;
+    }
+
+    .upsell-variant-select {
+        margin: 0.5rem 0;
+        padding: 0.4rem;
+        font-size: 0.9rem;
+        width: 100%;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        $('.upsell-carousel').slick({
+            slidesToShow: 2,
+            autoplay: true,
+            autoplaySpeed: 5000,
+            infinite: true,
+            arrows: true,
+            dots: true,
+            prevArrow: `<button class="custom-arrow slick-prev" aria-label="Previous">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M15 18l-6-6 6-6" />
+                </svg>
+                </button>`,
+            nextArrow: `<button class="custom-arrow slick-next" aria-label="Next">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M9 6l6 6-6 6" />
+                </svg>
+                </button>`,
+
+            responsive: [
+                {
+                    breakpoint: 768,
+                    settings: {
+                        slidesToShow: 2,
+                    },
+                },
+                {
+                    breakpoint: 1024,
+                    settings: {
+                        slidesToShow: 3,
+                    },
+                },
+            ],
+        });
+
+        document.querySelectorAll('.upsell-form').forEach(form => {
+            // Update hidden input when variant is changed
+            const variantSelect = form.querySelector('.upsell-variant-select');
+            const hiddenInput = form.querySelector('input[name="id"]');
+
+            if (variantSelect && hiddenInput) {
+                variantSelect.addEventListener('change', () => {
+                    hiddenInput.value = variantSelect.value;
+                });
+            }
+
+            // Handle add-to-cart submission
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(form);
+
+                fetch('/cart/add.js', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Add to cart failed');
+                        return res.json();
+                    })
+                    .then(() => {
+                        fetch('/?section_id=cart-drawer')
+                            .then(res => res.text())
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newDrawer = doc.querySelector('cart-drawer');
+                                const existingDrawer = document.querySelector('cart-drawer');
+                                if (newDrawer && existingDrawer) {
+                                    existingDrawer.innerHTML = newDrawer.innerHTML;
+                                }
+                                if (window.cartDrawer?.open) {
+                                    window.cartDrawer.open();
+                                } else {
+                                    document.querySelector('[aria-controls="cart-drawer"]')?.click();
+                                }
+                                const feedback = form.querySelector('.upsell-feedback');
+                                if (feedback) {
+                                    feedback.style.display = 'block';
+                                    setTimeout(() => feedback.style.display = 'none', 4000);
+                                }
+                            });
+                    })
+                    .catch(error => {
+                        console.error('Upsell Add to Cart Error:', error);
+                        alert('Could not add item to cart. Please try again.');
+                    });
+            });
+        });
+
+
+        document.querySelectorAll('.upsell-form').forEach((form) => {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(form);
+
+                fetch('/cart/add.js', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                })
+                    .then((res) => {
+                        if (!res.ok) throw new Error('Add to cart failed');
+                        return res.json();
+                    })
+                    .then(() => {
+                        fetch('/?section_id=cart-drawer')
+                            .then((res) => res.text())
+                            .then((html) => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newDrawer = doc.querySelector('cart-drawer');
+                                const existingDrawer = document.querySelector('cart-drawer');
+
+                                if (newDrawer && existingDrawer) {
+                                    existingDrawer.innerHTML = newDrawer.innerHTML;
+                                }
+
+                                if (window.cartDrawer?.open) {
+                                    window.cartDrawer.open();
+                                } else {
+                                    document.querySelector('[aria-controls="cart-drawer"]')?.click();
+                                }
+
+                                const feedback = form.querySelector('.upsell-feedback');
+                                if (feedback) {
+                                    feedback.style.display = 'block';
+                                    setTimeout(() => {
+                                        feedback.style.display = 'none';
+                                    }, 4000);
+                                }
+                            });
+                    })
+                    .catch((error) => {
+                        console.error('Upsell Add to Cart Error:', error);
+                        alert('Could not add item to cart. Please try again.');
+                    });
+            });
+        });
+    });
+</script>
+{% endif %}
