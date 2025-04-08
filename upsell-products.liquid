@@ -7,12 +7,10 @@
     <h3>{{ upsell_heading }}</h3>
 
     <div class="upsell-carousel">
-        {% assign upsell_count = 0 %} {# Initialize counter to limit how many upsell items show #}
+        {% assign upsell_count = 0 %}
 
         {% for item in collection.products %}
         {% if item.id != product.id %}
-        {# Skip the current product from being shown as an upsell #}
-
         <div class="upsell-item">
             <a href="{{ item.url }}">
                 {% comment %} Show product image linking to the product page {% endcomment %}
