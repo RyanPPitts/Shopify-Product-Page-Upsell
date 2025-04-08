@@ -7,6 +7,8 @@ Theme type : Dawn
 ![Screenshot 2025-04-08 163103](https://github.com/user-attachments/assets/42062284-4ba3-4c87-9d8a-ca6618b4d34d)
 
 
+Demo site : https://tako-turbo.myshopify.com/ - password : ryanpitts
+
 ## 🔧 Features
 
 - Displays upsell products from the same collection (excluding the current product)
