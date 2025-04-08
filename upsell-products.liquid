@@ -1,53 +1,72 @@
+{% comment %} Get the first collection the current product belongs to {% endcomment %}
 {% assign collection = product.collections.first %}
+
 {% if collection %}
 <div class="upsell-products">
+    {% comment %} Display the upsell heading (customizable via theme settings) {% endcomment %}
     <h3>{{ upsell_heading }}</h3>
+
     <div class="upsell-carousel">
-        {% assign upsell_count = 0 %}
+        {% assign upsell_count = 0 %} {# Initialize counter to limit how many upsell items show #}
+
         {% for item in collection.products %}
-        {% if item.id != product.id %}
+        {% if item.id != product.id %} {# Skip the current product from being shown as an upsell #}
+
         <div class="upsell-item">
             <a href="{{ item.url }}">
+                {% comment %} Show product image linking to the product page {% endcomment %}
                 <img class="upsell-image" src="{{ item.featured_image | img_url: 'medium' }}" alt="{{ item.title }}">
             </a>
+
+            {% comment %} Display product title and price {% endcomment %}
             <p class="upsell-title">{{ item.title }}</p>
             <p class="upsell-price">{{ item.price | money }}</p>
+
+            {% comment %} Form to add upsell product directly to cart {% endcomment %}
             <form method="post" action="/cart/add" class="upsell-form" data-product-id="{{ item.id }}">
                 {% if item.variants.size > 1 %}
+                {% comment %} If product has multiple variants, show a dropdown {% endcomment %}
                 <select class="upsell-variant-selector" name="id">
                     {% for variant in item.variants %}
                     <option value="{{ variant.id }}">{{ variant.title }} - {{ variant.price | money }}</option>
                     {% endfor %}
                 </select>
                 {% else %}
+                {% comment %} If product has only one variant, use a hidden input {% endcomment %}
                 <input type="hidden" name="id" value="{{ item.variants.first.id }}">
                 {% endif %}
 
                 <button type="submit" class="button upsell-add-button">Add to cart</button>
 
+                {% comment %} Hidden confirmation message shown after successful add to cart {% endcomment %}
                 <div class="upsell-feedback" style="display: none; margin-top: 0.5rem;">
                     ✅ Item added to cart. <a href="/cart" class="upsell-cart-link">View cart</a>
                 </div>
             </form>
         </div>
+
         {% assign upsell_count = upsell_count | plus: 1 %}
         {% if upsell_count == upsell_limit %}
-        {% break %}
+        {% break %} {# Stop the loop once upsell limit is reached #}
         {% endif %}
+
         {% endif %}
         {% endfor %}
     </div>
 </div>
 
 <style>
+    /* Upsell carousel container */
     .upsell-carousel {
         margin: 1rem 0;
     }
 
+    /* Padding between slides */
     .slick-slide {
         padding: 0 10px;
     }
 
+    /* Style for individual upsell items */
     .upsell-item {
         background: #f9f9f9;
         padding: 1rem;
@@ -55,6 +74,7 @@
         text-align: center;
     }
 
+    /* Custom arrows for carousel */
     .custom-arrow {
         background: transparent;
         border: none;
@@ -74,11 +94,13 @@
         right: -25px;
     }
 
+    /* Disable arrow if not needed */
     .slick-disabled {
         opacity: 0.3;
         pointer-events: none;
     }
 
+    /* More detailed upsell item styling */
     .upsell-carousel .upsell-item {
         display: flex;
         flex-direction: column;
@@ -95,7 +117,6 @@
         margin: 0.5rem 0 0.2rem;
         font-weight: bold;
         min-height: 2.5em;
-        /* keeps titles balanced even if one is multi-line */
     }
 
     .upsell-carousel .upsell-price {
@@ -127,6 +148,7 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // Initialize the upsell product carousel using Slick
         $('.upsell-carousel').slick({
             slidesToShow: 2,
             autoplay: true,
@@ -134,17 +156,20 @@
             infinite: true,
             arrows: true,
             dots: true,
-            prevArrow: `<button class="custom-arrow slick-prev" aria-label="Previous">
-                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M15 18l-6-6 6-6" />
-                </svg>
-                </button>`,
-            nextArrow: `<button class="custom-arrow slick-next" aria-label="Next">
-                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M9 6l6 6-6 6" />
-                </svg>
-                </button>`,
 
+            // Custom left and right navigation arrows
+            prevArrow: `<button class="custom-arrow slick-prev" aria-label="Previous">
+                      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M15 18l-6-6 6-6" />
+                      </svg>
+                    </button>`,
+            nextArrow: `<button class="custom-arrow slick-next" aria-label="Next">
+                      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M9 6l6 6-6 6" />
+                      </svg>
+                    </button>`,
+
+            // Make it responsive
             responsive: [
                 {
                     breakpoint: 768,
@@ -161,20 +186,22 @@
             ],
         });
 
+        // Set up form logic for each upsell item
         document.querySelectorAll('.upsell-form').forEach(form => {
-            // Update hidden input when variant is changed
             const variantSelect = form.querySelector('.upsell-variant-select');
             const hiddenInput = form.querySelector('input[name="id"]');
 
+            // If there's a variant dropdown, update the hidden input when changed
             if (variantSelect && hiddenInput) {
                 variantSelect.addEventListener('change', () => {
                     hiddenInput.value = variantSelect.value;
                 });
             }
 
-            // Handle add-to-cart submission
+            // AJAX Add to Cart
             form.addEventListener('submit', function (e) {
-                e.preventDefault();
+                e.preventDefault(); // Prevent page reload
+
                 const formData = new FormData(form);
 
                 fetch('/cart/add.js', {
@@ -187,6 +214,7 @@
                         return res.json();
                     })
                     .then(() => {
+                        // Fetch updated cart drawer
                         fetch('/?section_id=cart-drawer')
                             .then(res => res.text())
                             .then(html => {
@@ -194,14 +222,19 @@
                                 const doc = parser.parseFromString(html, 'text/html');
                                 const newDrawer = doc.querySelector('cart-drawer');
                                 const existingDrawer = document.querySelector('cart-drawer');
+
                                 if (newDrawer && existingDrawer) {
                                     existingDrawer.innerHTML = newDrawer.innerHTML;
                                 }
+
+                                // Open the cart drawer
                                 if (window.cartDrawer?.open) {
                                     window.cartDrawer.open();
                                 } else {
                                     document.querySelector('[aria-controls="cart-drawer"]')?.click();
                                 }
+
+                                // Show success message
                                 const feedback = form.querySelector('.upsell-feedback');
                                 if (feedback) {
                                     feedback.style.display = 'block';
@@ -210,58 +243,6 @@
                             });
                     })
                     .catch(error => {
-                        console.error('Upsell Add to Cart Error:', error);
-                        alert('Could not add item to cart. Please try again.');
-                    });
-            });
-        });
-
-
-        document.querySelectorAll('.upsell-form').forEach((form) => {
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                const formData = new FormData(form);
-
-                fetch('/cart/add.js', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        Accept: 'application/json',
-                    },
-                })
-                    .then((res) => {
-                        if (!res.ok) throw new Error('Add to cart failed');
-                        return res.json();
-                    })
-                    .then(() => {
-                        fetch('/?section_id=cart-drawer')
-                            .then((res) => res.text())
-                            .then((html) => {
-                                const parser = new DOMParser();
-                                const doc = parser.parseFromString(html, 'text/html');
-                                const newDrawer = doc.querySelector('cart-drawer');
-                                const existingDrawer = document.querySelector('cart-drawer');
-
-                                if (newDrawer && existingDrawer) {
-                                    existingDrawer.innerHTML = newDrawer.innerHTML;
-                                }
-
-                                if (window.cartDrawer?.open) {
-                                    window.cartDrawer.open();
-                                } else {
-                                    document.querySelector('[aria-controls="cart-drawer"]')?.click();
-                                }
-
-                                const feedback = form.querySelector('.upsell-feedback');
-                                if (feedback) {
-                                    feedback.style.display = 'block';
-                                    setTimeout(() => {
-                                        feedback.style.display = 'none';
-                                    }, 4000);
-                                }
-                            });
-                    })
-                    .catch((error) => {
                         console.error('Upsell Add to Cart Error:', error);
                         alert('Could not add item to cart. Please try again.');
                     });
